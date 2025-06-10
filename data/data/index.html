@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Client Data Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    #login, #data-display {
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    h2 {
+      color: #2d3748;
+      margin-bottom: 20px;
+      font-size: 1.875rem; /* text-3xl */
+      font-weight: 700; /* font-bold */
+    }
+    input {
+      width: calc(100% - 20px);
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #4299e1; /* blue-500 */
+      color: white;
+      padding: 12px 25px;
+      border-radius: 8px;
+      font-size: 1.125rem; /* text-lg */
+      font-weight: 600; /* font-semibold */
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.3s ease;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #3182ce; /* blue-600 */
+    }
+    #error {
+      color: #e53e3e; /* red-600 */
+      margin-top: 10px;
+      font-weight: 500;
+    }
+    #dataTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    #dataTable th, #dataTable td {
+      border: 1px solid #e2e8f0; /* gray-300 */
+      padding: 10px;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    #dataTable th {
+      background-color: #edf2f7; /* gray-200 */
+      font-weight: 600;
+      color: #4a5568; /* gray-700 */
+      border-radius: 8px 8px 0 0; /* Rounded top corners */
+    }
+    /* Apply rounded corners to cells for better aesthetics */
+    #dataTable tr:first-child th:first-child { border-top-left-radius: 8px; }
+    #dataTable tr:first-child th:last-child { border-top-right-radius: 8px; }
+    #dataTable tr:last-child td:first-child { border-bottom-left-radius: 8px; }
+    #dataTable tr:last-child td:last-child { border-bottom-right-radius: 8px; }
+
+    @media (max-width: 600px) {
+      #login, #data-display {
+        padding: 20px;
+        max-width: 95%;
+      }
+      h2 {
+        font-size: 1.5rem;
+      }
+      input, button {
+        padding: 10px;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="login" class="rounded-xl">
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="Email" class="rounded-lg">
+    <input type="password" id="password" placeholder="Password" class="rounded-lg">
+    <button onclick="login()" class="rounded-lg">Login</button>
+    <p id="error"></p>
+  </div>
+
+  <div id="data-display" style="display:none;" class="rounded-xl">
+    <h2>Your Data</h2>
+    <table id="dataTable" class="rounded-lg">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Color</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data rows will be inserted here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // IMPORTANT: Replace this with your deployed Apps Script web app URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbzLRwbLAWa813PDdyo4ZoBVNu6s-KwKKjKMYXXiB7J-nDn9s8_1oWLTs0oX4Via4Ep8CA/exec";
+
+    /**
+     * Handles the login process by sending user credentials to the Apps Script backend.
+     */
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const errorDisplay = document.getElementById("error");
+      errorDisplay.textContent = ""; // Clear previous errors
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: new URLSearchParams({
+          action: 'login',
+          email,
+          password
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          loadData(data.client); // Call loadData after successful login
+        } else {
+          errorDisplay.textContent = data.message || "Login failed. Please check your credentials.";
+        }
+      })
+      .catch(error => {
+        console.error('Login error:', error);
+        errorDisplay.textContent = "An error occurred during login. Please try again.";
+      });
+    }
+
+    /**
+     * Loads the client's data (Name, Age, Color) from the Apps Script backend
+     * and displays it in a table.
+     * @param {string} client The name of the logged-in client.
+     */
+    function loadData(client) {
+      fetch(API_URL, {
+        method: 'POST',
+        body: new URLSearchParams({
+          action: 'getData', // Call the 'getData' action
+          client
+        })
+      })
+      .then(res => res.json())
+      .then(response => {
+        // Hide login form and show data display
+        document.getElementById("login").style.display = "none";
+        document.getElementById("data-display").style.display = "block";
+
+        const tableBody = document.getElementById("dataTable").querySelector("tbody");
+        tableBody.innerHTML = ""; // Clear existing table rows
+
+        if (response.data && response.data.length > 0) {
+          // Assuming 'data' will be an array of objects, even if just one
+          response.data.forEach(item => {
+            const row = `
+              <tr>
+                <td>${item.name}</td>
+                <td>${item.age}</td>
+                <td>${item.color}</td>
+              </tr>
+            `;
+            tableBody.innerHTML += row;
+          });
+        } else {
+          tableBody.innerHTML = '<tr><td colspan="3">No data found for this client.</td></tr>';
+          if (response.message) {
+            console.warn("Backend message:", response.message);
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Load data error:', error);
+        const tableBody = document.getElementById("dataTable").querySelector("tbody");
+        tableBody.innerHTML = '<tr><td colspan="3" style="color:red;">Failed to load data.</td></tr>';
+      });
+    }
+  </script>
+</body>
+</html>
